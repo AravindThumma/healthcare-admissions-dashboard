@@ -13,6 +13,7 @@ An interactive, app-style Power BI dashboard that analyses hospital admissions, 
 ## Business questions answered
 
 | Page | Questions |
+|---|---|
 | Overview | How many admissions are there, how do they trend by month, and how do they split by condition, admission type and age group? |
 | Clinical | How do test results (normal, abnormal, inconclusive) vary by condition? How long do patients stay? Which medications are used for which conditions? |
 | Financial | How much is billed per insurer and per year? What is the average cost per admission for each condition and insurer? |
@@ -29,6 +30,7 @@ Five slicers (year, condition, admission type, insurance, gender) are synced acr
 ## Data preparation (Power Query)
 
 | Step | Rows |
+|---|---|
 | Loaded CSV | 55,500 |
 | Removed 534 exact duplicate rows (all columns compared) | 54,966 |
 | Removed 108 negative billing amounts | 54,860 |
@@ -49,6 +51,7 @@ I profiled the report with Performance Analyzer. DAX queries were fast (about 19
 ## Repository contents
 
 | Path | What it is |
+|---|---|
 | `powerbi/` | The .pbix report and the custom theme (`MediPulse_theme.json`) |
 | `queries/Fact_Admissions.m` | The Power Query cleaning script |
 | `dax/Measures.dax` | The DAX measures and date table |
