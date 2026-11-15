@@ -1,0 +1,122 @@
+// =====================================================================
+// MediPulse - DAX. Create each block in Model view / Modeling > New measure/table.
+// Table names: Fact_Admissions (from the M query), Dim_Date (below).
+// =====================================================================
+
+// ---------- Dim_Date (New table) ----------
+Dim_Date = 
+ADDCOLUMNS(
+    CALENDAR( DATE ( 2019, 1, 1 ), DATE ( 2024, 12, 31) ),
+    "Year", YEAR( [Date] ),
+    "Month Start", DATE ( YEAR ( [Date] ), MONTH ( [Date] ), 1 ),
+    "Month Label", FORMAT ( [Date], "MMM") & UNICHAR(10) & FORMAT([Date], "yyyy" )
+)
+// Then: Table tools > Mark as date table (Date column).
+// Sort "Month Label" by "Month Start". Hide Month Start if you like.
+// Relationship: Fact_Admissions[Date of Admission] (many) -> Dim_Date[Date] (one), single direction.
+// Sort Fact_Admissions[Age Group] by [Age Group Sort].
+
+// ---------- Core measures ----------
+Admissions = COUNTROWS ( Fact_Admissions )
+
+Total Billing = SUM ( Fact_Admissions[Billing Amount] )
+
+Avg Billing = DIVIDE ( [Total Billing], [Admissions] )
+
+Avg LOS = AVERAGE ( Fact_Admissions[LOS Days] )
+
+Abnormal Rate =
+DIVIDE (
+    CALCULATE ( [Admissions], Fact_Admissions[Test Results] = "Abnormal" ),
+    [Admissions]
+)
+
+Emergency Share =
+DIVIDE (
+    CALCULATE ( [Admissions], Fact_Admissions[Admission Type] = "Emergency" ),
+    [Admissions]
+)
+
+Avg Age = AVERAGE ( Fact_Admissions[Age] )
+
+// ---------- Formatting helper (data labels in K / M / B) ----------
+Money Label =
+VAR v = [Total Billing]
+RETURN
+    SWITCH (
+        TRUE (),
+        v >= 1e9, FORMAT ( v / 1e9, "$0.00" ) & "B",
+        v >= 1e6, FORMAT ( v / 1e6, "$0.0" ) & "M",
+        v >= 1e3, FORMAT ( v / 1e3, "$0.0" ) & "K",
+        FORMAT ( v, "$0" )
+    )
+
+// ---------- Trend toggle (Field parameter) ----------
+// Modeling > New parameter > Fields: add [Admissions] and [Total Billing],
+// or paste this as a New table. Use 'Trend Metric' on the line chart Y axis
+// and show 'Trend Metric' as a slicer (tile style, single select).
+Trend Metric =
+{
+    ( "Admissions", NAMEOF ( [Admissions] ), 0 ),
+    ( "Billing", NAMEOF ( [Total Billing] ), 1 )
+}
+
+// ---------- Insight cards (dynamic text for the 3 navy cards) ----------
+Top Condition =
+VAR t =
+    TOPN ( 1, VALUES ( Fact_Admissions[Medical Condition] ), [Admissions], DESC )
+RETURN
+    MAXX ( t, Fact_Admissions[Medical Condition] )
+
+Top Condition Admissions =
+VAR c = [Top Condition]
+RETURN CALCULATE ( [Admissions], Fact_Admissions[Medical Condition] = c )
+
+Insight - Most Admissions =
+IF (
+    [Admissions] = 0,
+    "No admissions match these filters.",
+    [Top Condition] & " leads with " & FORMAT ( [Top Condition Admissions], "#,0" )
+        & " admissions, " & FORMAT ( DIVIDE ( [Top Condition Admissions], [Admissions] ), "0.0%" )
+        & " of the current view."
+)
+
+Top Admission Type =
+VAR t =
+    TOPN ( 1, VALUES ( Fact_Admissions[Admission Type] ), [Admissions], DESC )
+RETURN
+    MAXX ( t, Fact_Admissions[Admission Type] )
+
+Insight - Arrival Mix = 
+VAR _Total = [Admissions]
+VAR _TopType = [Top Admisson Type]
+VAR _TopCount =
+    CALCULATE ( [Admissions], Fact_Admissions[Admission Type] = _TopType )
+VAR _TopShare = DIVIDE ( _TopCount, _Total )
+RETURN
+    IF (
+        _Total = 0 || ISBLANK ( _TopType ),
+        BLANK (),
+        _TopType & " admissions are the largest group at "
+            & FORMAT ( _TopShare, "0.0%" )
+            & ". Emergency makes up "
+            & FORMAT ( [Emergency Share], "0.0%" )
+            & "."
+)
+
+Insight - Test Results =
+IF (
+    [Admissions] = 0,
+    BLANK (),
+    FORMAT ( [Abnormal Rate], "0.0%" ) & " of admissions ended with an abnormal result, across an average stay of "
+        & FORMAT ( [Avg LOS], "0.0" ) & " days."
+)
+
+// ---------- Subtitle under the page title ----------
+Page Subtitle =
+FORMAT ( [Admissions], "#,0" ) & " admissions  |  "
+    & IF (
+        ISFILTERED ( Dim_Date[Year] ),
+        CONCATENATEX ( VALUES ( Dim_Date[Year] ), Dim_Date[Year], ", ", Dim_Date[Year] ),
+        "May 2019 - May 2024"
+    )
