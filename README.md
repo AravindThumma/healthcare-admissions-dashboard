@@ -70,4 +70,4 @@ Power BI Desktop, Power Query (M), DAX
 
 ## Author
 
-Aravind Thumma | [LinkedIn profile URL]((https://www.linkedin.com/in/aravind-thumma-analyticsengineer/))
+Aravind Thumma | [LinkedIn profile]([url](https://www.linkedin.com/in/aravind-thumma-analyticsengineer/))
